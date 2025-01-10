@@ -1,31 +1,15 @@
+import pygame
 from circleshape import *
 import constants as C
-from typing import *
 from constants import RGBColor
-from pygame import Vector2, sprite
+from shot import *
 
 class Player(CircleShape):
-    containers: ClassVar[tuple[sprite.Group, ...]] = ()
-
-    @classmethod
-    def add_to_group(self, *grp: sprite.Group | Iterable[sprite.Group]) -> None:
-        if Player.is_player(grp):
-            _ = [grp]
-        else:
-            _ = [g for g in Player.containers]
-            _.extend([g for g in grp])
-        Player.containers = tuple(_)
-
-    @classmethod
-    def is_player(self, obj: Any) -> TypeGuard['Player']:
-        if isinstance(obj, Player):
-            return True
-        else:
-            return False
 
     def __init__(self, x, y):
         super().__init__(x, y, C.PLAYER_RADIUS)
         self.rotation = 0
+        self.cooldown = 0
     
     # in the player class
     def triangle(self):
@@ -43,11 +27,17 @@ class Player(CircleShape):
         self.rotation += C.PLAYER_TURN_SPEED * dt
 
     def move(self, dt):
-        v = Vector2(0, 1).rotate(self.rotation)
+        v = pygame.Vector2(0, 1).rotate(self.rotation)
         self.position += v * C.PLAYER_SPEED * dt
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
+        if self.cooldown > 0:
+            dcd = self.cooldown - dt
+            if dcd < 0:
+                self.cooldown = 0
+            else:
+                self.cooldown -= dt
 
         if keys[pygame.K_w]:
             self.move(dt)
@@ -57,3 +47,10 @@ class Player(CircleShape):
             self.rotate(-dt)
         if keys[pygame.K_d]:
             self.rotate(dt)
+        if keys[pygame.K_SPACE]:
+            self.shoot()
+
+    def shoot(self):
+        if self.cooldown <= 0:
+            Shot(self.position.x, self.position.y, C.SHOT_RADIUS).velocity = pygame.Vector2(0, 1).rotate(self.rotation) * C.PLAYER_SHOT_SPEED
+            self.cooldown += C.PLAYER_SHOT_COOLDOWN
